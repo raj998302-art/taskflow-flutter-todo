@@ -12,6 +12,7 @@ import '../../domain/entities/lock_type.dart';
 import '../providers/lock_provider.dart';
 import '../widgets/pattern_lock_view.dart';
 import '../widgets/pin_keypad.dart';
+import '../../router/app_router.dart';
 
 /// The verification lock screen shown on app launch (and resume) when a lock
 /// is enabled.
@@ -74,6 +75,7 @@ class _LockScreenState extends ConsumerState<LockScreen> {
     );
     if (ok) {
       await ref.read(lockRepositoryProvider).resetFailedAttempts();
+      clearShouldLock();
       if (mounted) context.go('/home');
     } else {
       setState(() => _busy = false);
@@ -84,6 +86,7 @@ class _LockScreenState extends ConsumerState<LockScreen> {
     final repo = ref.read(lockRepositoryProvider);
     final ok = await repo.verifyPin(pin);
     if (ok) {
+      clearShouldLock();
       if (mounted) context.go('/home');
     } else {
       _onFailed();
@@ -94,6 +97,7 @@ class _LockScreenState extends ConsumerState<LockScreen> {
     final repo = ref.read(lockRepositoryProvider);
     final ok = await repo.verifyPattern(pattern);
     if (ok) {
+      clearShouldLock();
       if (mounted) context.go('/home');
     } else {
       _onFailed();

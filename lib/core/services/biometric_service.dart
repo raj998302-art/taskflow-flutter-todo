@@ -33,6 +33,11 @@ class BiometricService {
   }
 
   /// Prompts the user to authenticate with biometrics. Returns true on success.
+  ///
+  /// Uses `biometricOnly: false` so the system shows ALL enrolled biometrics
+  /// (fingerprint AND face AND iris) plus device credential as fallback.
+  /// The OS decides which biometric to use based on what the user has enrolled
+  /// in their device Settings — we can't force one over the other.
   Future<bool> authenticate({String reason = 'Please authenticate to unlock Taskflow'}) async {
     try {
       return await _auth.authenticate(
@@ -46,6 +51,34 @@ class BiometricService {
     } on PlatformException catch (e) {
       debugPrint('Biometric auth failed: ${e.code} — ${e.message}');
       return false;
+    }
+  }
+
+  /// Returns a human-readable list of available biometric types for display.
+  /// e.g. "Fingerprint, Face" or "Fingerprint only".
+  Future<String> get availableBiometricsDescription async {
+    try {
+      final biometrics = await _auth.getAvailableBiometrics();
+      if (biometrics.isEmpty) return 'None';
+      final names = <String>[];
+      for (final b in biometrics) {
+        switch (b) {
+          case BiometricType.fingerprint:
+            names.add('Fingerprint');
+            break;
+          case BiometricType.face:
+            names.add('Face');
+            break;
+          case BiometricType.iris:
+            names.add('Iris');
+            break;
+          default:
+            break;
+        }
+      }
+      return names.isEmpty ? 'None' : names.join(', ');
+    } catch (_) {
+      return 'Unknown';
     }
   }
 }

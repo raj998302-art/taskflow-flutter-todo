@@ -11,6 +11,7 @@ import '../../domain/entities/lock_type.dart';
 import '../providers/lock_provider.dart';
 import '../widgets/pattern_lock_view.dart';
 import '../widgets/pin_keypad.dart';
+import '../../router/app_router.dart';
 
 /// Guided setup flow for the app-lock feature.
 ///
@@ -139,6 +140,10 @@ class _LockSetupPageState extends ConsumerState<LockSetupPage> {
     );
     if (ok) {
       await ref.read(lockRepositoryProvider).enableLock(LockType.biometric);
+      // Clear the should-lock flag so the router doesn't immediately redirect
+      // to the lock screen after setup. Lock should only trigger on NEXT app
+      // open or resume from background.
+      clearShouldLock();
       if (mounted) setState(() => _phase = _SetupPhase.done);
     } else {
       setState(() => _error = 'Biometric authentication failed');
@@ -196,6 +201,8 @@ class _LockSetupPageState extends ConsumerState<LockSetupPage> {
     await ref
         .read(lockRepositoryProvider)
         .enableLock(_selectedType, secret: secret);
+    // Clear should-lock so router doesn't immediately force lock screen.
+    clearShouldLock();
     if (mounted) setState(() => _phase = _SetupPhase.done);
     setState(() => _busy = false);
   }
@@ -370,63 +377,78 @@ class _EnrollPhase extends StatelessWidget {
   Widget build(BuildContext context) {
     // ---- Biometric enroll ----
     if (type == LockType.biometric) {
-      return Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            'Authenticate to enable biometric lock',
-            style: context.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Use your fingerprint or face to confirm. Taskflow will require this every time you open the app.',
-            style: context.textTheme.bodyMedium?.copyWith(
-              color: context.colors.onSurfaceVariant,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 32),
-          if (error != null)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: Text(
-                error!,
+      return FutureBuilder<String>(
+        future: BiometricService.instance.availableBiometricsDescription,
+        builder: (context, snapshot) {
+          final available = snapshot.data ?? '...';
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Authenticate to enable biometric lock',
+                style: context.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Available: $available',
                 style: context.textTheme.bodySmall?.copyWith(
-                  color: AppColors.error,
+                  color: context.colors.primary,
                   fontWeight: FontWeight.w600,
                 ),
                 textAlign: TextAlign.center,
               ),
-            ),
-          if (busy)
-            const CircularProgressIndicator()
-          else
-            GestureDetector(
-              onTap: onBiometricSetup,
-              child: Container(
-                width: 88,
-                height: 88,
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.12),
-                  shape: BoxShape.circle,
+              const SizedBox(height: 8),
+              Text(
+                'Use your fingerprint or face to confirm. Taskflow will require this every time you open the app.',
+                style: context.textTheme.bodyMedium?.copyWith(
+                  color: context.colors.onSurfaceVariant,
                 ),
-                child: const Icon(
-                  Icons.fingerprint_rounded,
-                  size: 48,
-                  color: AppColors.primary,
-                ),
+                textAlign: TextAlign.center,
               ),
-            ),
-          const SizedBox(height: 16),
-          if (!busy)
-            TextButton(
-              onPressed: onBiometricSetup,
-              child: const Text('Tap to authenticate'),
-            ),
-        ],
+              const SizedBox(height: 32),
+              if (error != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: Text(
+                    error!,
+                    style: context.textTheme.bodySmall?.copyWith(
+                      color: AppColors.error,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              if (busy)
+                const CircularProgressIndicator()
+              else
+                GestureDetector(
+                  onTap: onBiometricSetup,
+                  child: Container(
+                    width: 88,
+                    height: 88,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.fingerprint_rounded,
+                      size: 48,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 16),
+              if (!busy)
+                TextButton(
+                  onPressed: onBiometricSetup,
+                  child: const Text('Tap to authenticate'),
+                ),
+            ],
+          );
+        },
       );
     }
 

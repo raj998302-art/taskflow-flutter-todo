@@ -37,8 +37,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         return lockEnabled && _shouldLock ? '/lock' : '/home';
       }
       // 2. Lock enabled and should-lock flag set → lock screen.
+      //    BUT: don't redirect if user is in the middle of setting up a lock
+      //    (lock-setup page) or already on the lock screen.
       if (lockEnabled && _shouldLock &&
-          path != '/lock' && path != '/onboarding' && path != '/lock-setup') {
+          path != '/lock' && path != '/onboarding' &&
+          path != '/lock-setup' && path != '/settings') {
         _shouldLock = false;
         return '/lock';
       }
