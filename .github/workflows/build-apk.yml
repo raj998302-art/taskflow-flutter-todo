@@ -73,8 +73,8 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0.0
-          name: Taskflow v1.0.0
+          tag_name: v1.0.${{ github.run_number }}
+          name: Taskflow v1.0.${{ github.run_number }}
           body: |
             ## Taskflow — Premium Flutter Todo App with Voice Reminders
 
@@ -86,6 +86,7 @@ jobs:
 
             ### Install
             Download `Taskflow-release.apk` below and install on your Android device.
+            (Build run #${{ github.run_number }})
           files: Taskflow-release.apk
           draft: false
           prerelease: false
