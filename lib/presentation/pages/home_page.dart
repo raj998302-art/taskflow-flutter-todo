@@ -18,6 +18,8 @@ import '../providers/task_providers.dart';
 import '../providers/theme_provider.dart';
 import '../widgets/add_task_sheet.dart';
 import '../widgets/filter_bar.dart';
+import '../widgets/glass_hero_stats.dart';
+import '../widgets/glass_nav_drawer.dart';
 import '../widgets/pomodoro_timer.dart';
 import '../widgets/reminder_card.dart';
 import '../widgets/search_bar_widget.dart';
@@ -146,6 +148,7 @@ class _HomePageState extends ConsumerState<HomePage>
                   ref.read(themeModeProvider.notifier).toggle(),
               onStatsTap: () => context.push('/statistics'),
               onSettingsTap: () => context.push('/settings'),
+              onMenuTap: () => showGlassDrawer(context),
             ),
 
             // ---- Tab bar ----
@@ -456,6 +459,7 @@ class _Header extends StatelessWidget {
     required this.onToggleTheme,
     required this.onStatsTap,
     required this.onSettingsTap,
+    required this.onMenuTap,
   });
 
   final String greeting;
@@ -465,6 +469,7 @@ class _Header extends StatelessWidget {
   final VoidCallback onToggleTheme;
   final VoidCallback onStatsTap;
   final VoidCallback onSettingsTap;
+  final VoidCallback onMenuTap;
 
   @override
   Widget build(BuildContext context) {
@@ -497,6 +502,11 @@ class _Header extends StatelessWidget {
                 ),
               ),
               _GlassIconButton(
+                icon: Icons.menu_rounded,
+                onTap: onMenuTap,
+              ),
+              const SizedBox(width: 8),
+              _GlassIconButton(
                 icon: isDark
                     ? Icons.light_mode_rounded
                     : Icons.dark_mode_rounded,
@@ -510,118 +520,10 @@ class _Header extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          GestureDetector(
-            onTap: onStatsTap,
-            child: GlassContainer(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              child: Row(
-                children: [
-                  _HeaderStat(
-                    icon: Icons.flash_on_rounded,
-                    value: '$activeCount',
-                    label: 'Active',
-                    color: AppColors.primary,
-                  ),
-                  Container(
-                    width: 1,
-                    height: 36,
-                    margin: const EdgeInsets.symmetric(horizontal: 12),
-                    color: context.colors.outlineVariant
-                        .withValues(alpha: 0.4),
-                  ),
-                  _HeaderStat(
-                    icon: Icons.check_circle_rounded,
-                    value: '$completedCount',
-                    label: 'Done',
-                    color: AppColors.success,
-                  ),
-                  const Spacer(),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: context.colors.primaryContainer,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.insights_rounded,
-                          size: 16,
-                          color: context.colors.onPrimaryContainer,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Stats',
-                          style: context.textTheme.labelSmall?.copyWith(
-                            color: context.colors.onPrimaryContainer,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+          GlassHeroStats(onTap: onStatsTap),
         ],
       ),
     ).animate().fadeIn(duration: 400.ms).slideY(begin: -0.05, end: 0);
-  }
-}
-
-class _HeaderStat extends StatelessWidget {
-  const _HeaderStat({
-    required this.icon,
-    required this.value,
-    required this.label,
-    required this.color,
-  });
-
-  final IconData icon;
-  final String value;
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 32,
-          height: 32,
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Icon(icon, size: 18, color: color),
-        ),
-        const SizedBox(width: 10),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              value,
-              style: context.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            Text(
-              label,
-              style: context.textTheme.labelSmall?.copyWith(
-                color: context.colors.onSurfaceVariant,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
   }
 }
 
