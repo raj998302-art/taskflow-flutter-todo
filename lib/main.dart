@@ -7,6 +7,7 @@ import 'app.dart';
 import 'core/constants/app_constants.dart';
 import 'core/services/notification_service.dart';
 import 'presentation/providers/app_settings_provider.dart';
+import 'presentation/providers/lock_provider.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -36,6 +37,7 @@ Future<void> main() async {
           notifier.load();
           return notifier;
         }),
+        lockRepositoryProvider.overrideWithValue(createLockRepository(prefs)),
       ],
       child: const TodoApp(),
     ),

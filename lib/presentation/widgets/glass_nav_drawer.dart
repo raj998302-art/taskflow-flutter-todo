@@ -120,55 +120,10 @@ class GlassNavDrawer extends ConsumerWidget {
 
                           const _DrawerDivider(),
 
-                          // ---- Navigation ----
-                          _SectionLabel(text: 'Navigate'),
-                          _NavItem(
-                            icon: Icons.task_alt_rounded,
-                            label: 'Tasks',
-                            subtitle:
-                                '${stats.active} active · ${stats.completed} done',
-                            onTap: () {
-                              Navigator.of(context).pop();
-                              context.go('/home');
-                            },
-                          ),
-                          _NavItem(
-                            icon: Icons.alarm_rounded,
-                            label: 'Reminders',
-                            subtitle: stats.overdue > 0
-                                ? '${stats.overdue} overdue'
-                                : 'Voice alarms',
-                            onTap: () {
-                              Navigator.of(context).pop();
-                              context.go('/home');
-                            },
-                          ),
-                          _NavItem(
-                            icon: Icons.insights_rounded,
-                            label: 'Statistics',
-                            subtitle:
-                                '${(stats.completionRate * 100).round()}% complete',
-                            onTap: () {
-                              Navigator.of(context).pop();
-                              context.push('/statistics');
-                            },
-                          ),
-                          _NavItem(
-                            icon: Icons.timer_rounded,
-                            label: 'Focus Timer',
-                            subtitle: 'Pomodoro',
-                            onTap: () {
-                              Navigator.of(context).pop();
-                              context.go('/home');
-                            },
-                          ),
-
-                          const _DrawerDivider(),
-
                           _NavItem(
                             icon: Icons.settings_rounded,
                             label: 'Settings',
-                            subtitle: 'Theme, lock, data',
+                            subtitle: 'Theme, lock, security, data',
                             onTap: () {
                               Navigator.of(context).pop();
                               context.push('/settings');

@@ -4,32 +4,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/constants/app_colors.dart';
-import '../../core/services/biometric_service.dart';
 import '../../core/services/notification_service.dart';
 import '../../core/utils/extensions.dart';
 import '../../core/widgets/glass_container.dart';
+import '../../domain/entities/lock_type.dart';
 import '../providers/app_settings_provider.dart';
+import '../providers/lock_provider.dart';
 import '../providers/reminder_providers.dart';
 import '../providers/task_providers.dart';
 import '../providers/theme_provider.dart';
-
-/// Auto-lock delay options exposed in the Security section (seconds).
-const List<int> _autoLockOptions = <int>[0, 30, 60, 300];
-
-/// Human-readable label for an auto-lock delay value (in seconds).
-String _autoLockLabel(int seconds) {
-  switch (seconds) {
-    case 30:
-      return 'After 30s';
-    case 60:
-      return 'After 1 min';
-    case 300:
-      return 'After 5 min';
-    case 0:
-    default:
-      return 'Immediately';
-  }
-}
 
 /// Premium Settings page organised into four glass-card sections:
 /// Appearance, Security, Data, and About.
@@ -93,11 +76,7 @@ class SettingsPage extends ConsumerWidget {
                     icon: Icons.lock_outline_rounded,
                     title: 'Security',
                     child: _SecuritySection(
-                      appLockEnabled: settings.appLockEnabled,
-                      autoLockSeconds: settings.autoLockSeconds,
-                      onAutoLockChanged: (s) => ref
-                          .read(appSettingsProvider.notifier)
-                          .setAutoLockSeconds(s),
+                      onSetupLock: () => context.push('/lock-setup'),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -413,154 +392,112 @@ class _AccentSwatch extends StatelessWidget {
 // ===========================================================================
 
 class _SecuritySection extends ConsumerWidget {
-  const _SecuritySection({
-    required this.appLockEnabled,
-    required this.autoLockSeconds,
-    required this.onAutoLockChanged,
-  });
-
-  final bool appLockEnabled;
-  final int autoLockSeconds;
-  final ValueChanged<int> onAutoLockChanged;
+  const _SecuritySection({required this.onSetupLock});
+  final VoidCallback onSetupLock;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final repo = ref.watch(lockRepositoryProvider);
+    final lockType = repo.isLockEnabled ? repo.lockType : LockType.none;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _AppLockTile(enabled: appLockEnabled),
-        AnimatedCrossFade(
-          duration: 250.ms,
-          crossFadeState: appLockEnabled
-              ? CrossFadeState.showSecond
-              : CrossFadeState.showFirst,
-          firstChild: const SizedBox(height: 0, width: double.infinity),
-          secondChild: ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: Icon(
-              Icons.timer_outlined,
-              size: 20,
-              color: context.colors.onSurfaceVariant,
-            ),
-            title: Text(
-              'Auto-lock delay',
-              style: context.textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w600,
+        // Current lock status card
+        InkWell(
+          onTap: onSetupLock,
+          borderRadius: BorderRadius.circular(14),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            decoration: BoxDecoration(
+              color: (lockType == LockType.none
+                      ? AppColors.error
+                      : AppColors.success)
+                  .withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: (lockType == LockType.none
+                        ? AppColors.error
+                        : AppColors.success)
+                    .withValues(alpha: 0.2),
               ),
             ),
-            subtitle: Text(
-              'How long Taskflow stays unlocked in the background',
-              style: context.textTheme.bodySmall,
-            ),
-            trailing: DropdownButton<int>(
-              value: _autoLockOptions.contains(autoLockSeconds)
-                  ? autoLockSeconds
-                  : 0,
-              underline: const SizedBox(),
-              items: [
-                for (final s in _autoLockOptions)
-                  DropdownMenuItem<int>(
-                    value: s,
-                    child: Text(_autoLockLabel(s)),
+            child: Row(
+              children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: (lockType == LockType.none
+                            ? AppColors.error
+                            : AppColors.success)
+                        .withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
                   ),
+                  child: Icon(
+                    lockType == LockType.none
+                        ? Icons.lock_open_rounded
+                        : Icons.lock_rounded,
+                    size: 22,
+                    color: lockType == LockType.none
+                        ? AppColors.error
+                        : AppColors.success,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        lockType == LockType.none
+                            ? 'App lock is off'
+                            : '${lockType.label} lock is on',
+                        style: context.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      Text(
+                        lockType == LockType.none
+                            ? 'Tap to set up a lock'
+                            : lockType.description,
+                        style: context.textTheme.bodySmall?.copyWith(
+                          color: context.colors.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(Icons.chevron_right_rounded,
+                    color: context.colors.onSurfaceVariant),
               ],
-              onChanged: (v) {
-                if (v != null) onAutoLockChanged(v);
-              },
             ),
           ),
         ),
-      ],
-    );
-  }
-}
-
-/// App-lock switch tile. Performs an async biometric availability check +
-/// authentication before enabling the lock. Shows a spinner while busy.
-class _AppLockTile extends ConsumerStatefulWidget {
-  const _AppLockTile({required this.enabled});
-
-  final bool enabled;
-
-  @override
-  ConsumerState<_AppLockTile> createState() => _AppLockTileState();
-}
-
-class _AppLockTileState extends ConsumerState<_AppLockTile> {
-  bool _busy = false;
-
-  Future<void> _onChanged(bool value) async {
-    if (_busy) return;
-
-    // Turning OFF is unconditional.
-    if (!value) {
-      await ref.read(appSettingsProvider.notifier).setAppLock(false);
-      return;
-    }
-
-    // Turning ON — first verify biometrics are even available.
-    setState(() => _busy = true);
-    try {
-      final available = await BiometricService.instance.isAvailable;
-      if (!available) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Biometrics not available on this device'),
+        const SizedBox(height: 8),
+        // Quick link
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: Icon(
+            Icons.manage_accounts_rounded,
+            size: 22,
+            color: context.colors.primary,
+          ),
+          title: Text(
+            'Configure lock',
+            style: context.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w600,
             ),
-          );
-        }
-        return;
-      }
-      final ok = await BiometricService.instance.authenticate(
-        reason: 'Authenticate to enable app lock',
-      );
-      if (ok) {
-        await ref.read(appSettingsProvider.notifier).setAppLock(true);
-      } else if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Authentication failed')),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: Icon(
-        Icons.fingerprint_rounded,
-        size: 22,
-        color: context.colors.primary,
-      ),
-      title: Text(
-        'App Lock',
-        style: context.textTheme.bodyMedium?.copyWith(
-          fontWeight: FontWeight.w600,
+          ),
+          subtitle: Text(
+            'Choose biometric, pattern, or PIN',
+            style: context.textTheme.bodySmall,
+          ),
+          trailing: Icon(Icons.chevron_right_rounded,
+              color: context.colors.onSurfaceVariant),
+          onTap: onSetupLock,
         ),
-      ),
-      subtitle: Text(
-        widget.enabled
-            ? 'Biometric unlock is on'
-            : 'Require biometrics to open Taskflow',
-        style: context.textTheme.bodySmall,
-      ),
-      trailing: _busy
-          ? SizedBox(
-              width: 24,
-              height: 24,
-              child: CircularProgressIndicator(
-                strokeWidth: 2.5,
-                color: context.colors.primary,
-              ),
-            )
-          : Switch(
-              value: widget.enabled,
-              onChanged: _onChanged,
-            ),
+      ],
     );
   }
 }

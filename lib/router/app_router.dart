@@ -2,45 +2,47 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../presentation/pages/home_page.dart';
-import '../presentation/pages/lock_page.dart';
+import '../presentation/pages/lock_screen.dart';
+import '../presentation/pages/lock_setup_page.dart';
 import '../presentation/pages/onboarding_page.dart';
 import '../presentation/pages/settings_page.dart';
 import '../presentation/pages/statistics_page.dart';
 import '../presentation/pages/task_detail_page.dart';
 import '../presentation/providers/app_settings_provider.dart';
+import '../presentation/providers/lock_provider.dart';
 
 /// Application router built with go_router.
 ///
-/// Uses a [redirect] to send the user to `/onboarding` on first launch, or to
-/// `/lock` when the app-lock feature is enabled and the app is being resumed
-/// (the lock state is tracked by [AppLifecycleManager]).
+/// Redirect logic:
+/// 1. Onboarding not seen → `/onboarding`.
+/// 2. Lock enabled + `_shouldLock` flag set (by lifecycle manager) → `/lock`.
+/// 3. Root `/` → `/home`.
 final appRouterProvider = Provider<GoRouter>((ref) {
   final settings = ref.watch(appSettingsProvider);
+  // Read the lock repo so we can check isLockEnabled in the redirect.
+  final lockRepo = ref.watch(lockRepositoryProvider);
 
   return GoRouter(
     initialLocation: '/',
     redirect: (context, state) {
       final path = state.matchedLocation;
       final onboardingDone = settings.onboardingSeen;
-      final lockEnabled = settings.appLockEnabled;
+      final lockEnabled = lockRepo.isLockEnabled;
 
-      // 1. Onboarding not seen → force onboarding (unless already there).
+      // 1. Onboarding not seen → force onboarding.
       if (!onboardingDone && path != '/onboarding') {
         return '/onboarding';
       }
-      // 2. Onboarding done but on onboarding route → go home (or lock).
       if (onboardingDone && path == '/onboarding') {
-        return lockEnabled ? '/lock' : '/home';
+        return lockEnabled && _shouldLock ? '/lock' : '/home';
       }
-      // 3. App lock enabled and user is at root or lock-unrelated route →
-      //    send to lock (the lock page itself navigates to /home on success).
-      //    We only force lock on the *initial* app open, tracked via the
-      //    _shouldLock flag set by the lifecycle manager.
-      if (lockEnabled && _shouldLock && path != '/lock' && path != '/onboarding') {
+      // 2. Lock enabled and should-lock flag set → lock screen.
+      if (lockEnabled && _shouldLock &&
+          path != '/lock' && path != '/onboarding' && path != '/lock-setup') {
         _shouldLock = false;
         return '/lock';
       }
-      // 4. Root '/' → home (or lock if enabled).
+      // 3. Root → home.
       if (path == '/') {
         return lockEnabled && _shouldLock ? '/lock' : '/home';
       }
@@ -55,7 +57,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/lock',
         name: 'lock',
-        builder: (context, state) => const LockPage(),
+        builder: (context, state) => const LockScreen(),
+      ),
+      GoRoute(
+        path: '/lock-setup',
+        name: 'lockSetup',
+        builder: (context, state) => const LockSetupPage(),
       ),
       GoRoute(
         path: '/home',
@@ -86,6 +93,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 /// background, so the router redirect can force the lock screen.
 bool _shouldLock = true;
 
-/// Resets the lock flag — called on app startup so the very first launch (with
-/// app lock on) still shows the lock screen.
+/// Marks that the next router redirect should send the user to the lock
+/// screen. Called on app startup and on app resume (when app lock is on).
 void markShouldLock() => _shouldLock = true;
+
+/// Clears the should-lock flag (e.g. after a successful unlock).
+void clearShouldLock() => _shouldLock = false;

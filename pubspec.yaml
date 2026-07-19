@@ -64,6 +64,9 @@ dependencies:
   # Speech-to-text for voice input (quick add tasks/reminders)
   speech_to_text: ^7.0.0
 
+  # SHA-256 hashing for PIN/pattern lock secrets
+  crypto: ^3.0.6
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

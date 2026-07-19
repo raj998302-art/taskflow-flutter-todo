@@ -18,6 +18,7 @@ import '../providers/task_providers.dart';
 import '../providers/theme_provider.dart';
 import '../widgets/add_task_sheet.dart';
 import '../widgets/filter_bar.dart';
+import '../widgets/floating_bottom_nav.dart';
 import '../widgets/glass_hero_stats.dart';
 import '../widgets/glass_nav_drawer.dart';
 import '../widgets/pomodoro_timer.dart';
@@ -311,6 +312,12 @@ class _HomePageState extends ConsumerState<HomePage>
                 ),
               ],
             ),
+        ),
+        const Positioned(
+          bottom: 0,
+          left: 0,
+          right: 0,
+          child: FloatingBottomNav(currentIndex: 0),
         ),
         ConfettiBurst(trigger: celebrate),
       ],
