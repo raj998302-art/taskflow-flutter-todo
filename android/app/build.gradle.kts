@@ -5,15 +5,15 @@ plugins {
 
 android {
     namespace = "com.taskflow.flutter_todo_app"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 36
 
     compileOptions {
+        // Enable core library desugaring — required by flutter_local_notifications
+        // and flutter_tts for Java 8+ API calls on older Android versions.
+        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    // Enable core library desugaring — required by flutter_local_notifications
-    // and flutter_tts for Java 8+ API calls on older Android versions.
-    isCoreLibraryDesugaringEnabled = true
 
     defaultConfig {
         applicationId = "com.taskflow.flutter_todo_app"
