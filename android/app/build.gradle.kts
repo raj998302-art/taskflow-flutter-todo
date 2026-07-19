@@ -8,12 +8,12 @@ android {
     compileSdk = flutter.compileSdkVersion
 
     compileOptions {
-        // Enable core library desugaring — required by flutter_local_notifications
-        // and flutter_tts for Java 8+ API calls on older Android versions.
-        coreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+    // Enable core library desugaring — required by flutter_local_notifications
+    // and flutter_tts for Java 8+ API calls on older Android versions.
+    isCoreLibraryDesugaringEnabled = true
 
     defaultConfig {
         applicationId = "com.taskflow.flutter_todo_app"
