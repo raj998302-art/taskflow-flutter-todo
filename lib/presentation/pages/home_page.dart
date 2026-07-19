@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/utils/extensions.dart';
+import '../../core/widgets/confetti_burst.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/error_widget.dart';
 import '../../core/widgets/glass_container.dart';
@@ -17,6 +18,7 @@ import '../providers/task_providers.dart';
 import '../providers/theme_provider.dart';
 import '../widgets/add_task_sheet.dart';
 import '../widgets/filter_bar.dart';
+import '../widgets/pomodoro_timer.dart';
 import '../widgets/reminder_card.dart';
 import '../widgets/search_bar_widget.dart';
 import '../widgets/set_reminder_sheet.dart';
@@ -125,11 +127,14 @@ class _HomePageState extends ConsumerState<HomePage>
     final stats = ref.watch(statsProvider);
     final themeMode = ref.watch(themeModeProvider);
     final remindersAsync = ref.watch(reminderListProvider);
+    final celebrate = ref.watch(celebrateProvider);
 
-    return Scaffold(
-      body: SafeArea(
-        bottom: false,
-        child: Column(
+    return Stack(
+      children: [
+        Scaffold(
+          body: SafeArea(
+            bottom: false,
+            child: Column(
           children: [
             // ---- Header (fixed, non-scrolling) ----
             _Header(
@@ -140,6 +145,7 @@ class _HomePageState extends ConsumerState<HomePage>
               onToggleTheme: () =>
                   ref.read(themeModeProvider.notifier).toggle(),
               onStatsTap: () => context.push('/statistics'),
+              onSettingsTap: () => context.push('/settings'),
             ),
 
             // ---- Tab bar ----
@@ -162,6 +168,12 @@ class _HomePageState extends ConsumerState<HomePage>
                         ),
                       ),
                       const SliverToBoxAdapter(child: FilterBar()),
+                      const SliverToBoxAdapter(
+                        child: Padding(
+                          padding: EdgeInsets.fromLTRB(16, 8, 16, 4),
+                          child: PomodoroTimer(),
+                        ),
+                      ),
                       const SliverToBoxAdapter(child: SizedBox(height: 8)),
                       tasksAsync.when(
                         loading: () => const SliverFillRemaining(
@@ -296,6 +308,9 @@ class _HomePageState extends ConsumerState<HomePage>
                 ),
               ],
             ),
+        ),
+        ConfettiBurst(trigger: celebrate),
+      ],
     );
   }
 
@@ -440,6 +455,7 @@ class _Header extends StatelessWidget {
     required this.themeMode,
     required this.onToggleTheme,
     required this.onStatsTap,
+    required this.onSettingsTap,
   });
 
   final String greeting;
@@ -448,6 +464,7 @@ class _Header extends StatelessWidget {
   final ThemeMode themeMode;
   final VoidCallback onToggleTheme;
   final VoidCallback onStatsTap;
+  final VoidCallback onSettingsTap;
 
   @override
   Widget build(BuildContext context) {
@@ -484,6 +501,11 @@ class _Header extends StatelessWidget {
                     ? Icons.light_mode_rounded
                     : Icons.dark_mode_rounded,
                 onTap: onToggleTheme,
+              ),
+              const SizedBox(width: 8),
+              _GlassIconButton(
+                icon: Icons.settings_rounded,
+                onTap: onSettingsTap,
               ),
             ],
           ),

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'core/theme/app_theme.dart';
+import 'presentation/providers/app_settings_provider.dart';
 import 'presentation/providers/theme_provider.dart';
 import 'router/app_router.dart';
 
@@ -10,11 +11,45 @@ import 'router/app_router.dart';
 ///
 /// Observes the user's theme preference (light / dark / system) and applies
 /// the corresponding Material 3 theme. Routing is delegated to [appRouter].
-class TodoApp extends ConsumerWidget {
+/// An [AppLifecycleManager] watches app pause/resume so the app-lock screen
+/// can be re-shown when the user returns to a locked app.
+class TodoApp extends ConsumerStatefulWidget {
   const TodoApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<TodoApp> createState() => _TodoAppState();
+}
+
+class _TodoAppState extends ConsumerState<TodoApp> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // When the app is resumed from background and app-lock is enabled,
+    // mark that the router should redirect to /lock on the next navigation.
+    if (state == AppLifecycleState.resumed) {
+      final settings = ref.read(appSettingsProvider);
+      if (settings.appLockEnabled) {
+        markShouldLock();
+        // Trigger a re-redirect by refreshing the router. The router's
+        // redirect will send the user to /lock.
+        ref.read(appRouterProvider).refresh();
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final themeMode = ref.watch(themeModeProvider);
     final goRouter = ref.watch(appRouterProvider);
 

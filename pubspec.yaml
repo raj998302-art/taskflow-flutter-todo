@@ -52,12 +52,38 @@ dependencies:
   # Timezone support for scheduling notifications
   timezone: ^0.9.4
 
+  # Biometric authentication (fingerprint / face unlock) for app lock
+  local_auth: ^2.3.0
+
+  # Confetti animation on task completion
+  confetti: ^0.8.0
+
+  # Simple key-value store for app settings (onboarding seen, app lock, etc.)
+  shared_preferences: ^2.3.3
+
+  # Speech-to-text for voice input (quick add tasks/reminders)
+  speech_to_text: ^7.0.0
+
+  # Haptic feedback utilities
+  flutter_haptic: ^0.0.3
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^4.0.0
   build_runner: ^2.4.13
   riverpod_generator: ^2.6.3
+  flutter_launcher_icons: ^0.14.3
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/app_logo.png"
+  min_sdk_android: 21
+  adaptive_icon_background: "#7C5CFC"
+  adaptive_icon_foreground: "assets/images/app_logo.png"
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/images/

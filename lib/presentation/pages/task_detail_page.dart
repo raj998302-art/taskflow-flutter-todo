@@ -154,6 +154,8 @@ class _DetailContent extends ConsumerWidget {
                 ).animate().fadeIn(delay: 140.ms, duration: 300.ms),
               ],
               const SizedBox(height: 16),
+              _SubtasksSection(task: task),
+              const SizedBox(height: 16),
               _MetaGrid(task: task),
               const SizedBox(height: 24),
               _ActionButtons(task: task),
@@ -211,6 +213,215 @@ class _DetailContent extends ConsumerWidget {
       await ref.read(taskListProvider.notifier).deleteTask(task.id);
       if (context.mounted) context.go('/');
     }
+  }
+}
+
+class _SubtasksSection extends ConsumerStatefulWidget {
+  const _SubtasksSection({required this.task});
+  final Task task;
+
+  @override
+  ConsumerState<_SubtasksSection> createState() => _SubtasksSectionState();
+}
+
+class _SubtasksSectionState extends ConsumerState<_SubtasksSection> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final text = _controller.text.trim();
+    if (text.isEmpty) return;
+    ref
+        .read(taskListProvider.notifier)
+        .addSubTask(widget.task.id, text);
+    _controller.clear();
+    FocusScope.of(context).unfocus();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final task = widget.task;
+    final subs = task.subtasks;
+    final doneCount = subs.where((s) => s.isDone).length;
+
+    return GlassContainer(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.checklist_rounded,
+                  size: 18, color: AppColors.primary),
+              const SizedBox(width: 6),
+              Text(
+                'Subtasks',
+                style: context.textTheme.labelMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                '$doneCount/${subs.length}',
+                style: context.textTheme.labelMedium?.copyWith(
+                  color: context.colors.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: task.subtaskProgress,
+              minHeight: 4,
+              backgroundColor:
+                  AppColors.primary.withValues(alpha: 0.12),
+              valueColor:
+                  const AlwaysStoppedAnimation<Color>(AppColors.primary),
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (subs.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Center(
+                child: Text(
+                  'No subtasks. Add one below.',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontStyle: FontStyle.italic,
+                    color: context.colors.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            )
+          else
+            Column(
+              children: [
+                for (final sub in subs)
+                  _SubtaskRow(
+                    key: ValueKey(sub.id),
+                    task: task,
+                    sub: sub,
+                  ).animate().fadeIn(duration: 200.ms),
+              ],
+            ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _controller,
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => _submit(),
+            style: context.textTheme.bodyMedium,
+            decoration: InputDecoration(
+              isDense: true,
+              prefixIcon: Icon(
+                Icons.add_rounded,
+                size: 20,
+                color: context.colors.onSurfaceVariant,
+              ),
+              hintText: 'Add a subtask...',
+              hintStyle: TextStyle(
+                fontSize: 14,
+                color: context.colors.onSurfaceVariant,
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 10,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color:
+                      context.colors.onSurfaceVariant.withValues(alpha: 0.2),
+                ),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color:
+                      context.colors.onSurfaceVariant.withValues(alpha: 0.2),
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(
+                  color: AppColors.primary,
+                  width: 1.5,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    ).animate().fadeIn(delay: 160.ms, duration: 300.ms);
+  }
+}
+
+class _SubtaskRow extends ConsumerWidget {
+  const _SubtaskRow({super.key, required this.task, required this.sub});
+
+  final Task task;
+  final SubTask sub;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => ref
+                .read(taskListProvider.notifier)
+                .toggleSubTask(task.id, sub.id),
+            child: Icon(
+              sub.isDone
+                  ? Icons.check_circle_rounded
+                  : Icons.radio_button_unchecked_rounded,
+              size: 22,
+              color: sub.isDone
+                  ? AppColors.primary
+                  : context.colors.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              sub.title,
+              style: TextStyle(
+                fontSize: 15,
+                decoration:
+                    sub.isDone ? TextDecoration.lineThrough : null,
+                color: sub.isDone
+                    ? context.colors.onSurfaceVariant
+                    : null,
+              ),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.close_rounded, size: 18),
+            color: context.colors.onSurfaceVariant,
+            tooltip: 'Remove',
+            visualDensity: VisualDensity.compact,
+            onPressed: () => ref
+                .read(taskListProvider.notifier)
+                .removeSubTask(task.id, sub.id),
+          ),
+        ],
+      ),
+    );
   }
 }
 

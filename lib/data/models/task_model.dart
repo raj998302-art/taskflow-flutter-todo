@@ -17,6 +17,7 @@ class TaskModel {
     this.dueDate,
     required this.createdAt,
     required this.updatedAt,
+    this.subtasks = const [],
   });
 
   final String id;
@@ -28,6 +29,7 @@ class TaskModel {
   final DateTime? dueDate;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final List<SubTask> subtasks;
 
   /// Convert from a domain [Task] to the persistence model.
   factory TaskModel.fromEntity(Task task) {
@@ -41,6 +43,7 @@ class TaskModel {
       dueDate: task.dueDate,
       createdAt: task.createdAt,
       updatedAt: task.updatedAt,
+      subtasks: task.subtasks,
     );
   }
 
@@ -56,6 +59,7 @@ class TaskModel {
       dueDate: dueDate,
       createdAt: createdAt,
       updatedAt: updatedAt,
+      subtasks: subtasks,
     );
   }
 
@@ -71,11 +75,20 @@ class TaskModel {
       'dueDate': dueDate?.toIso8601String(),
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
+      'subtasks': subtasks.map((s) => s.toMap()).toList(),
     };
   }
 
   /// Deserialise from a Map stored in Hive.
   factory TaskModel.fromMap(Map<dynamic, dynamic> map) {
+    final rawSubs = map['subtasks'];
+    List<SubTask> subs = const [];
+    if (rawSubs is List) {
+      subs = rawSubs
+          .whereType<Map>()
+          .map((m) => SubTask.fromMap(m.cast<String, dynamic>()))
+          .toList();
+    }
     return TaskModel(
       id: map['id'] as String,
       title: map['title'] as String,
@@ -92,6 +105,7 @@ class TaskModel {
       updatedAt: map['updatedAt'] == null
           ? DateTime.now()
           : DateTime.parse(map['updatedAt'] as String),
+      subtasks: subs,
     );
   }
 }

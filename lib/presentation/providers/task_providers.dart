@@ -92,6 +92,59 @@ class TaskListNotifier extends StateNotifier<AsyncValue<List<Task>>> {
     }
   }
 
+  /// Toggles a single subtask's done state and persists the parent task.
+  Future<void> toggleSubTask(String taskId, String subTaskId) async {
+    final list = state.value ?? [];
+    final existing = list.where((t) => t.id == taskId).firstOrNull;
+    if (existing == null) return;
+    final updatedSubs = existing.subtasks
+        .map((s) => s.id == subTaskId ? s.copyWith(isDone: !s.isDone) : s)
+        .toList();
+    final updated = existing.copyWith(
+      subtasks: updatedSubs,
+      updatedAt: DateTime.now(),
+    );
+    await _repository.updateTask(updated);
+    state = AsyncValue.data([
+      for (final t in list) if (t.id == taskId) updated else t,
+    ]);
+  }
+
+  /// Adds a new subtask to the given task.
+  Future<void> addSubTask(String taskId, String title) async {
+    final list = state.value ?? [];
+    final existing = list.where((t) => t.id == taskId).firstOrNull;
+    if (existing == null) return;
+    final newSub = SubTask(
+      id: 'sub_${DateTime.now().millisecondsSinceEpoch}',
+      title: title.trim(),
+      isDone: false,
+    );
+    final updated = existing.copyWith(
+      subtasks: [...existing.subtasks, newSub],
+      updatedAt: DateTime.now(),
+    );
+    await _repository.updateTask(updated);
+    state = AsyncValue.data([
+      for (final t in list) if (t.id == taskId) updated else t,
+    ]);
+  }
+
+  /// Removes a subtask from the given task.
+  Future<void> removeSubTask(String taskId, String subTaskId) async {
+    final list = state.value ?? [];
+    final existing = list.where((t) => t.id == taskId).firstOrNull;
+    if (existing == null) return;
+    final updated = existing.copyWith(
+      subtasks: existing.subtasks.where((s) => s.id != subTaskId).toList(),
+      updatedAt: DateTime.now(),
+    );
+    await _repository.updateTask(updated);
+    state = AsyncValue.data([
+      for (final t in list) if (t.id == taskId) updated else t,
+    ]);
+  }
+
   Future<int> deleteCompletedTasks() async {
     final previous = state.value ?? [];
     final removed = previous.where((t) => t.isCompleted).length;

@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/extensions.dart';
+import '../../core/widgets/confetti_burst.dart';
 import '../../core/widgets/glass_container.dart';
 import '../../domain/entities/task.dart';
 import '../../domain/entities/task_enums.dart';
@@ -72,8 +73,10 @@ class TaskCard extends ConsumerWidget {
         extentRatio: 0.28,
         children: [
           SlidableAction(
-            onPressed: (_) =>
-                ref.read(taskListProvider.notifier).toggleComplete(task.id),
+            onPressed: (_) {
+              ref.read(taskListProvider.notifier).toggleComplete(task.id);
+              if (!task.isCompleted) celebrate(ref);
+            },
             backgroundColor: AppColors.success,
             foregroundColor: Colors.white,
             icon: task.isCompleted
@@ -130,9 +133,12 @@ class TaskCard extends ConsumerWidget {
                       _CheckboxToggle(
                         completed: task.isCompleted,
                         color: accentColor,
-                        onTap: () => ref
-                            .read(taskListProvider.notifier)
-                            .toggleComplete(task.id),
+                        onTap: () {
+                          ref
+                              .read(taskListProvider.notifier)
+                              .toggleComplete(task.id);
+                          if (!task.isCompleted) celebrate(ref);
+                        },
                       ),
                       // Title + description + meta chips.
                       Expanded(
