@@ -8,6 +8,9 @@ android {
     compileSdk = flutter.compileSdkVersion
 
     compileOptions {
+        // Enable core library desugaring — required by flutter_local_notifications
+        // and flutter_tts for Java 8+ API calls on older Android versions.
+        coreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
@@ -18,6 +21,7 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        multiDexEnabled = true
     }
 
     buildTypes {
@@ -25,6 +29,10 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
+}
+
+dependencies {
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }
 
 kotlin {
