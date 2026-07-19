@@ -1,18 +1,20 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import 'core/services/session_manager.dart';
 import 'core/theme/app_theme.dart';
-import 'presentation/providers/lock_provider.dart';
 import 'presentation/providers/theme_provider.dart';
 import 'router/app_router.dart';
 
 /// Root widget for the Todo application.
 ///
-/// Observes the user's theme preference (light / dark / system) and applies
-/// the corresponding Material 3 theme. Routing is delegated to [appRouter].
-/// An [AppLifecycleManager] watches app pause/resume so the app-lock screen
-/// can be re-shown when the user returns to a locked app.
+/// Observes the user's theme preference and app lifecycle. Uses
+/// [SessionManager] to decide whether to show the lock screen — the session
+/// manager is the SINGLE SOURCE OF TRUTH for authentication state, surviving
+/// Activity recreation and BiometricPrompt lifecycle events.
 class TodoApp extends ConsumerStatefulWidget {
   const TodoApp({super.key});
 
@@ -21,28 +23,44 @@ class TodoApp extends ConsumerStatefulWidget {
 }
 
 class _TodoAppState extends ConsumerState<TodoApp> with WidgetsBindingObserver {
+  StreamSubscription<void>? _sessionSub;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // Listen to session changes so the router re-evaluates the redirect
+    // whenever the user authenticates or the session is invalidated.
+    _sessionSub = SessionManager.instance.onSessionChange.listen((_) {
+      // Trigger a router refresh — the redirect will check isSessionValid().
+      if (mounted) ref.read(appRouterProvider).refresh();
+    });
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _sessionSub?.cancel();
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // When the app is resumed from background and app-lock is enabled,
-    // mark that the router should redirect to /lock on the next navigation.
-    if (state == AppLifecycleState.resumed) {
-      final lockRepo = ref.read(lockRepositoryProvider);
-      if (lockRepo.isLockEnabled) {
-        markShouldLock();
+    // Delegate to SessionManager — it knows whether to suppress the
+    // background event (biometric prompt showing, enrollment flow, etc.).
+    switch (state) {
+      case AppLifecycleState.resumed:
+        SessionManager.instance.onAppComingToForeground();
+        // Re-evaluate lock state — if session was invalidated, router will
+        // redirect to /lock.
         ref.read(appRouterProvider).refresh();
-      }
+        break;
+      case AppLifecycleState.paused:
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.detached:
+      case AppLifecycleState.hidden:
+        SessionManager.instance.onAppGoingToBackground();
+        break;
     }
   }
 
@@ -60,7 +78,6 @@ class _TodoAppState extends ConsumerState<TodoApp> with WidgetsBindingObserver {
       routerConfig: goRouter,
       builder: (context, child) {
         return MediaQuery(
-          // Ensure text scales but cap it for consistent layout.
           data: MediaQuery.of(context).copyWith(
             textScaler: TextScaler.linear(
               MediaQuery.textScalerOf(context).scale(1).clamp(0.85, 1.3),

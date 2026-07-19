@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../core/services/session_manager.dart';
 import '../presentation/pages/home_page.dart';
 import '../presentation/pages/lock_screen.dart';
 import '../presentation/pages/lock_setup_page.dart';
@@ -13,13 +14,15 @@ import '../presentation/providers/lock_provider.dart';
 
 /// Application router built with go_router.
 ///
-/// Redirect logic:
+/// Redirect logic (session-based):
 /// 1. Onboarding not seen → `/onboarding`.
-/// 2. Lock enabled + `_shouldLock` flag set (by lifecycle manager) → `/lock`.
+/// 2. Lock enabled but session not valid → `/lock`.
 /// 3. Root `/` → `/home`.
+///
+/// The session check uses [SessionManager.isSessionValid] which survives
+/// Activity recreation and accounts for biometric-prompt / enrollment flows.
 final appRouterProvider = Provider<GoRouter>((ref) {
   final settings = ref.watch(appSettingsProvider);
-  // Read the lock repo so we can check isLockEnabled in the redirect.
   final lockRepo = ref.watch(lockRepositoryProvider);
 
   return GoRouter(
@@ -28,26 +31,36 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final path = state.matchedLocation;
       final onboardingDone = settings.onboardingSeen;
       final lockEnabled = lockRepo.isLockEnabled;
+      final sessionValid = SessionManager.instance.isSessionValid();
+      final needsLock = lockEnabled && !sessionValid;
 
       // 1. Onboarding not seen → force onboarding.
       if (!onboardingDone && path != '/onboarding') {
         return '/onboarding';
       }
       if (onboardingDone && path == '/onboarding') {
-        return lockEnabled && _shouldLock ? '/lock' : '/home';
+        return needsLock ? '/lock' : '/home';
       }
-      // 2. Lock enabled and should-lock flag set → lock screen.
-      //    BUT: don't redirect if user is in the middle of setting up a lock
-      //    (lock-setup page) or already on the lock screen.
-      if (lockEnabled && _shouldLock &&
-          path != '/lock' && path != '/onboarding' &&
-          path != '/lock-setup' && path != '/settings') {
-        _shouldLock = false;
+
+      // 2. Don't redirect if user is in lock setup or already on lock screen.
+      //    This lets the user configure locks without being interrupted.
+      if (path == '/lock-setup' || path == '/settings') {
+        return null;
+      }
+
+      // 3. If lock is needed and user is not on the lock screen → lock.
+      if (needsLock && path != '/lock') {
         return '/lock';
       }
-      // 3. Root → home.
+
+      // 4. If on lock screen but session is valid (already unlocked) → home.
+      if (path == '/lock' && !needsLock) {
+        return '/home';
+      }
+
+      // 5. Root → home.
       if (path == '/') {
-        return lockEnabled && _shouldLock ? '/lock' : '/home';
+        return needsLock ? '/lock' : '/home';
       }
       return null;
     },
@@ -91,14 +104,3 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     ],
   );
 });
-
-/// Set to `true` by [AppLifecycleManager] when the app is resumed from
-/// background, so the router redirect can force the lock screen.
-bool _shouldLock = true;
-
-/// Marks that the next router redirect should send the user to the lock
-/// screen. Called on app startup and on app resume (when app lock is on).
-void markShouldLock() => _shouldLock = true;
-
-/// Clears the should-lock flag (e.g. after a successful unlock).
-void clearShouldLock() => _shouldLock = false;

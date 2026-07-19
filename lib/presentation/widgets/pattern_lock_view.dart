@@ -30,9 +30,9 @@ class PatternLockView extends StatefulWidget {
     required this.onPatternComplete,
     this.onPatternChange,
     this.dotCount = 3,
-    this.dotRadius = 16.0,
-    this.strokeWidth = 4.0,
-    this.size = 280,
+    this.dotRadius = 18.0,
+    this.strokeWidth = 5.0,
+    this.size = 320,
     this.enabled = true,
   });
 
@@ -86,10 +86,13 @@ class _PatternLockViewState extends State<PatternLockView> {
     );
   }
 
-  /// Returns the index of the closest unselected node within
-  /// `dotRadius + 8` of [point], or `null` if none qualifies.
+  /// Returns the index of the closest unselected node within the touch
+  /// threshold of [point], or `null` if none qualifies.
+  ///
+  /// Touch threshold scales with dot size so larger grids are still
+  /// comfortable to use — 80px is generous for all screen sizes.
   int? _hitTest(Offset point) {
-    final double threshold = widget.dotRadius + 8;
+    final double threshold = (widget.dotRadius + 40).clamp(60.0, 100.0);
     for (int i = 0; i < _nodeCount; i++) {
       if (_selectedNodes.contains(i)) continue;
       final Offset pos = _nodePosition(i);
@@ -142,9 +145,13 @@ class _PatternLockViewState extends State<PatternLockView> {
     final ThemeData theme = Theme.of(context);
     final ColorScheme colors = theme.colorScheme;
 
+    // Responsive: fill up to 85% of screen width, max 360, min 260.
+    final screenWidth = MediaQuery.of(context).size.width;
+    final actualSize = (screenWidth * 0.82).clamp(260.0, 360.0);
+
     return SizedBox(
-      width: widget.size,
-      height: widget.size,
+      width: actualSize,
+      height: actualSize,
       child: ClipRect(
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
@@ -152,7 +159,7 @@ class _PatternLockViewState extends State<PatternLockView> {
           onPanUpdate: _onPanUpdate,
           onPanEnd: _onPanEnd,
           child: CustomPaint(
-            size: Size(widget.size, widget.size),
+            size: Size(actualSize, actualSize),
             painter: _PatternPainter(
               selectedNodes: List<int>.of(_selectedNodes),
               currentPoint: _currentPoint,

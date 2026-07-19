@@ -67,6 +67,9 @@ dependencies:
   # SHA-256 hashing for PIN/pattern lock secrets
   crypto: ^3.0.6
 
+  # Launch external URLs (used to open phone Settings for biometric enrollment)
+  url_launcher: ^6.3.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

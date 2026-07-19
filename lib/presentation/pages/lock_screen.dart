@@ -7,12 +7,12 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/services/biometric_service.dart';
+import '../../core/services/session_manager.dart';
 import '../../core/utils/extensions.dart';
 import '../../domain/entities/lock_type.dart';
 import '../providers/lock_provider.dart';
 import '../widgets/pattern_lock_view.dart';
 import '../widgets/pin_keypad.dart';
-import '../../router/app_router.dart';
 
 /// The verification lock screen shown on app launch (and resume) when a lock
 /// is enabled.
@@ -75,7 +75,7 @@ class _LockScreenState extends ConsumerState<LockScreen> {
     );
     if (ok) {
       await ref.read(lockRepositoryProvider).resetFailedAttempts();
-      clearShouldLock();
+      SessionManager.instance.onAuthenticated();
       if (mounted) context.go('/home');
     } else {
       setState(() => _busy = false);
@@ -86,7 +86,7 @@ class _LockScreenState extends ConsumerState<LockScreen> {
     final repo = ref.read(lockRepositoryProvider);
     final ok = await repo.verifyPin(pin);
     if (ok) {
-      clearShouldLock();
+      SessionManager.instance.onAuthenticated();
       if (mounted) context.go('/home');
     } else {
       _onFailed();
@@ -97,7 +97,7 @@ class _LockScreenState extends ConsumerState<LockScreen> {
     final repo = ref.read(lockRepositoryProvider);
     final ok = await repo.verifyPattern(pattern);
     if (ok) {
-      clearShouldLock();
+      SessionManager.instance.onAuthenticated();
       if (mounted) context.go('/home');
     } else {
       _onFailed();

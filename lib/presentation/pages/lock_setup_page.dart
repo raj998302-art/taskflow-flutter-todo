@@ -5,13 +5,13 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/services/biometric_service.dart';
+import '../../core/services/session_manager.dart';
 import '../../core/utils/extensions.dart';
 import '../../core/widgets/glass_container.dart';
 import '../../domain/entities/lock_type.dart';
 import '../providers/lock_provider.dart';
 import '../widgets/pattern_lock_view.dart';
 import '../widgets/pin_keypad.dart';
-import '../../router/app_router.dart';
 
 /// Guided setup flow for the app-lock feature.
 ///
@@ -96,6 +96,7 @@ class _LockSetupPageState extends ConsumerState<LockSetupPage> {
           onPatternComplete: _onPatternComplete,
           onPinComplete: _onPinComplete,
           onBiometricSetup: _setupBiometric,
+          onOpenSettings: _openEnrollmentSettings,
           busy: _busy,
         );
       case _SetupPhase.done:
@@ -130,7 +131,7 @@ class _LockSetupPageState extends ConsumerState<LockSetupPage> {
     final available = await BiometricService.instance.isAvailable;
     if (!available) {
       setState(() {
-        _error = 'Biometrics not available on this device';
+        _error = 'No biometrics enrolled. Open Settings to enroll fingerprint or face, then come back.';
         _busy = false;
       });
       return;
@@ -140,15 +141,22 @@ class _LockSetupPageState extends ConsumerState<LockSetupPage> {
     );
     if (ok) {
       await ref.read(lockRepositoryProvider).enableLock(LockType.biometric);
-      // Clear the should-lock flag so the router doesn't immediately redirect
-      // to the lock screen after setup. Lock should only trigger on NEXT app
-      // open or resume from background.
-      clearShouldLock();
+      // Mark the session as authenticated so the router doesn't redirect to
+      // /lock. The lock will only trigger on the NEXT app open or resume.
+      SessionManager.instance.onAuthenticated();
       if (mounted) setState(() => _phase = _SetupPhase.done);
     } else {
       setState(() => _error = 'Biometric authentication failed');
     }
     setState(() => _busy = false);
+  }
+
+  /// Opens the phone's Settings so the user can enroll biometrics.
+  /// SessionManager.onStartingEnrollment() is called inside
+  /// BiometricService.openEnrollmentSettings() so the app does NOT auto-lock
+  /// when it goes to the background.
+  Future<void> _openEnrollmentSettings() async {
+    await BiometricService.instance.openEnrollmentSettings();
   }
 
   void _onPatternComplete(List<int> pattern) {
@@ -201,8 +209,8 @@ class _LockSetupPageState extends ConsumerState<LockSetupPage> {
     await ref
         .read(lockRepositoryProvider)
         .enableLock(_selectedType, secret: secret);
-    // Clear should-lock so router doesn't immediately force lock screen.
-    clearShouldLock();
+    // Mark session authenticated so router doesn't immediately force lock.
+    SessionManager.instance.onAuthenticated();
     if (mounted) setState(() => _phase = _SetupPhase.done);
     setState(() => _busy = false);
   }
@@ -363,6 +371,7 @@ class _EnrollPhase extends StatelessWidget {
     required this.onPatternComplete,
     required this.onPinComplete,
     required this.onBiometricSetup,
+    required this.onOpenSettings,
     required this.busy,
   });
   final LockType type;
@@ -371,6 +380,7 @@ class _EnrollPhase extends StatelessWidget {
   final ValueChanged<List<int>> onPatternComplete;
   final ValueChanged<String> onPinComplete;
   final VoidCallback onBiometricSetup;
+  final VoidCallback onOpenSettings;
   final bool busy;
 
   @override
@@ -441,11 +451,18 @@ class _EnrollPhase extends StatelessWidget {
                   ),
                 ),
               const SizedBox(height: 16),
-              if (!busy)
+              if (!busy) ...[
                 TextButton(
                   onPressed: onBiometricSetup,
                   child: const Text('Tap to authenticate'),
                 ),
+                const SizedBox(height: 8),
+                TextButton.icon(
+                  onPressed: onOpenSettings,
+                  icon: const Icon(Icons.settings_rounded, size: 18),
+                  label: const Text('Open phone Settings to enroll'),
+                ),
+              ],
             ],
           );
         },
