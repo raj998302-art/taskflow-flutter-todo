@@ -64,9 +64,6 @@ dependencies:
   # Speech-to-text for voice input (quick add tasks/reminders)
   speech_to_text: ^7.0.0
 
-  # Haptic feedback utilities
-  flutter_haptic: ^0.0.3
-
 dev_dependencies:
   flutter_test:
     sdk: flutter
