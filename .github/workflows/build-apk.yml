@@ -45,14 +45,17 @@ jobs:
         run: flutter analyze || true
 
       - name: Create debug keystore
+        env:
+          DEBUG_KEYSTORE_PATH: /tmp/debug.keystore
         run: |
-          mkdir -p ~/.android
-          keytool -genkey -v -keystore ~/.android/debug.keystore \
+          keytool -genkey -v -keystore /tmp/debug.keystore \
             -storepass android -alias androiddebugkey -keypass android \
             -keyalg RSA -keysize 2048 -validity 10000 \
-            -dname "CN=Android Debug,O=Android,C=US" || true
+            -dname "CN=Android Debug,O=Android,C=US"
 
       - name: Build release APK
+        env:
+          DEBUG_KEYSTORE_PATH: /tmp/debug.keystore
         run: flutter build apk --release
 
       - name: Rename APK

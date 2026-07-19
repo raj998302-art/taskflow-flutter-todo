@@ -26,7 +26,20 @@ android {
 
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("debug")
+            // Use a keystore path that's writable in CI. The workflow creates
+            // /tmp/debug.keystore before building; fall back to the default
+            // debug keystore for local builds via the keystore property.
+            val keystorePath = System.getenv("DEBUG_KEYSTORE_PATH")
+            if (keystorePath != null && file(keystorePath).exists()) {
+                signingConfig = signingConfigs.create("release") {
+                    storeFile = file(keystorePath)
+                    storePassword = "android"
+                    keyAlias = "androiddebugkey"
+                    keyPassword = "android"
+                }
+            } else {
+                signingConfig = signingConfigs.getByName("debug")
+            }
         }
     }
 }
