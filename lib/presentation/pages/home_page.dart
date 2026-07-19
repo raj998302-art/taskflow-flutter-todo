@@ -481,6 +481,11 @@ class _Header extends StatelessWidget {
         children: [
           Row(
             children: [
+              _GlassIconButton(
+                icon: Icons.menu_rounded,
+                onTap: onMenuTap,
+              ),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -501,11 +506,6 @@ class _Header extends StatelessWidget {
                   ],
                 ),
               ),
-              _GlassIconButton(
-                icon: Icons.menu_rounded,
-                onTap: onMenuTap,
-              ),
-              const SizedBox(width: 8),
               _GlassIconButton(
                 icon: isDark
                     ? Icons.light_mode_rounded
