@@ -11,6 +11,7 @@ import '../../core/widgets/loading_animation.dart';
 import '../../domain/entities/task_enums.dart';
 import '../providers/stats_provider.dart';
 import '../providers/task_providers.dart';
+import '../widgets/floating_bottom_nav.dart';
 
 /// Statistics dashboard: completion ring, key metrics, weekly activity chart,
 /// and breakdowns by category and priority.
@@ -22,22 +23,24 @@ class StatisticsPage extends ConsumerWidget {
     final tasksAsync = ref.watch(taskListProvider);
     final stats = ref.watch(statsProvider);
 
-    return Scaffold(
-      body: SafeArea(
-        bottom: false,
-        child: CustomScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          slivers: [
-            SliverAppBar(
-              pinned: true,
-              leading: IconButton(
-                icon: const Icon(Icons.arrow_back_rounded),
-                onPressed: () => context.go('/'),
-              ),
-              title: const Text('Statistics'),
-              backgroundColor: context.theme.scaffoldBackgroundColor,
-              surfaceTintColor: Colors.transparent,
-            ),
+    return Stack(
+      children: [
+        Scaffold(
+          body: SafeArea(
+            bottom: false,
+            child: CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
+                SliverAppBar(
+                  pinned: true,
+                  leading: IconButton(
+                    icon: const Icon(Icons.arrow_back_rounded),
+                    onPressed: () => context.go('/home'),
+                  ),
+                  title: const Text('Statistics'),
+                  backgroundColor: context.theme.scaffoldBackgroundColor,
+                  surfaceTintColor: Colors.transparent,
+                ),
             tasksAsync.when(
               loading: () => const SliverFillRemaining(
                 hasScrollBody: false,
@@ -50,7 +53,7 @@ class StatisticsPage extends ConsumerWidget {
                 ),
               ),
               data: (_) => SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
                     _CompletionRing(stats: stats),
@@ -79,6 +82,14 @@ class StatisticsPage extends ConsumerWidget {
           ],
         ),
       ),
+        ),
+        const Positioned(
+          bottom: 0,
+          left: 0,
+          right: 0,
+          child: FloatingBottomNav(currentIndex: 1),
+        ),
+      ],
     );
   }
 

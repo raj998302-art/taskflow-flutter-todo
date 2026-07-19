@@ -13,6 +13,7 @@ import '../providers/lock_provider.dart';
 import '../providers/reminder_providers.dart';
 import '../providers/task_providers.dart';
 import '../providers/theme_provider.dart';
+import '../widgets/floating_bottom_nav.dart';
 
 /// Premium Settings page organised into four glass-card sections:
 /// Appearance, Security, Data, and About.
@@ -34,26 +35,28 @@ class SettingsPage extends ConsumerWidget {
     final settings = ref.watch(appSettingsProvider);
     final themeMode = ref.watch(themeModeProvider);
 
-    return Scaffold(
-      body: SafeArea(
-        bottom: false,
-        child: CustomScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          slivers: [
-            SliverAppBar(
-              pinned: true,
-              leading: IconButton(
-                icon: const Icon(Icons.arrow_back_rounded),
-                tooltip: 'Back',
-                onPressed: () => context.go('/home'),
-              ),
-              title: const Text('Settings'),
-              backgroundColor: context.theme.scaffoldBackgroundColor,
-              surfaceTintColor: Colors.transparent,
-              scrolledUnderElevation: 0,
-            ),
+    return Stack(
+      children: [
+        Scaffold(
+          body: SafeArea(
+            bottom: false,
+            child: CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
+                SliverAppBar(
+                  pinned: true,
+                  leading: IconButton(
+                    icon: const Icon(Icons.arrow_back_rounded),
+                    tooltip: 'Back',
+                    onPressed: () => context.go('/home'),
+                  ),
+                  title: const Text('Settings'),
+                  backgroundColor: context.theme.scaffoldBackgroundColor,
+                  surfaceTintColor: Colors.transparent,
+                  scrolledUnderElevation: 0,
+                ),
             SliverPadding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
               sliver: SliverList(
                 delegate: SliverChildListDelegate([
                   _SectionCard(
@@ -107,6 +110,14 @@ class SettingsPage extends ConsumerWidget {
           ],
         ),
       ),
+        ),
+        const Positioned(
+          bottom: 0,
+          left: 0,
+          right: 0,
+          child: FloatingBottomNav(currentIndex: 3),
+        ),
+      ],
     );
   }
 

@@ -283,35 +283,38 @@ class _HomePageState extends ConsumerState<HomePage>
           ],
         ),
       ),
-      floatingActionButton: _tabController.index == 1
-          ? FloatingActionButton.extended(
-              heroTag: 'set_reminder',
-              onPressed: _openSetReminderSheet,
-              icon: const Icon(Icons.alarm_add_rounded),
-              label: const Text('Set Reminder'),
-            )
-          : Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                if (_showClearCompleted && stats.completed > 0)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: FloatingActionButton.small(
-                      heroTag: 'clear_completed',
-                      onPressed: _confirmClearCompleted,
-                      tooltip: 'Clear completed',
-                      child: const Icon(Icons.cleaning_services_rounded),
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 80),
+        child: _tabController.index == 1
+            ? FloatingActionButton.extended(
+                heroTag: 'set_reminder',
+                onPressed: _openSetReminderSheet,
+                icon: const Icon(Icons.alarm_add_rounded),
+                label: const Text('Set Reminder'),
+              )
+            : Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  if (_showClearCompleted && stats.completed > 0)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: FloatingActionButton.small(
+                        heroTag: 'clear_completed',
+                        onPressed: _confirmClearCompleted,
+                        tooltip: 'Clear completed',
+                        child: const Icon(Icons.cleaning_services_rounded),
+                      ),
                     ),
+                  FloatingActionButton.extended(
+                    heroTag: 'add_task',
+                    onPressed: _openAddTaskSheet,
+                    icon: const Icon(Icons.add_rounded),
+                    label: const Text('New Task'),
                   ),
-                FloatingActionButton.extended(
-                  heroTag: 'add_task',
-                  onPressed: _openAddTaskSheet,
-                  icon: const Icon(Icons.add_rounded),
-                  label: const Text('New Task'),
-                ),
-              ],
-            ),
+                ],
+              ),
+      ),
         ),
         const Positioned(
           bottom: 0,

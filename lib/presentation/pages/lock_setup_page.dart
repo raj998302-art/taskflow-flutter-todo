@@ -42,13 +42,24 @@ class _LockSetupPageState extends ConsumerState<LockSetupPage> {
               onBack: _onBack,
             ),
             Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 480),
-                  child: _buildPhase(),
-                ),
-              ),
+              child: _phase == _SetupPhase.enroll ||
+                      _phase == _SetupPhase.confirm
+                  ? Center(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 480),
+                          child: _buildPhase(),
+                        ),
+                      ),
+                    )
+                  : SingleChildScrollView(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 480),
+                        child: _buildPhase(),
+                      ),
+                    ),
             ),
           ],
         ),
@@ -100,7 +111,10 @@ class _LockSetupPageState extends ConsumerState<LockSetupPage> {
       _firstEntry = null;
     });
     if (type == LockType.biometric) {
-      _setupBiometric();
+      // Transition to enroll phase so the UI shows the biometric prompt.
+      setState(() => _phase = _SetupPhase.enroll);
+      // Auto-trigger biometric after a short delay so the UI renders first.
+      WidgetsBinding.instance.addPostFrameCallback((_) => _setupBiometric());
     } else if (type == LockType.pattern || type == LockType.pin) {
       setState(() => _phase = _SetupPhase.enroll);
     } else {
@@ -354,24 +368,95 @@ class _EnrollPhase extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // ---- Biometric enroll ----
+    if (type == LockType.biometric) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'Authenticate to enable biometric lock',
+            style: context.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Use your fingerprint or face to confirm. Taskflow will require this every time you open the app.',
+            style: context.textTheme.bodyMedium?.copyWith(
+              color: context.colors.onSurfaceVariant,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 32),
+          if (error != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: Text(
+                error!,
+                style: context.textTheme.bodySmall?.copyWith(
+                  color: AppColors.error,
+                  fontWeight: FontWeight.w600,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          if (busy)
+            const CircularProgressIndicator()
+          else
+            GestureDetector(
+              onTap: onBiometricSetup,
+              child: Container(
+                width: 88,
+                height: 88,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.fingerprint_rounded,
+                  size: 48,
+                  color: AppColors.primary,
+                ),
+              ),
+            ),
+          const SizedBox(height: 16),
+          if (!busy)
+            TextButton(
+              onPressed: onBiometricSetup,
+              child: const Text('Tap to authenticate'),
+            ),
+        ],
+      );
+    }
+
+    // ---- Pattern / PIN enroll ----
     final prompt = phase == _SetupPhase.enroll
-        ? 'Draw your pattern' // overridden below per type
+        ? 'Confirm your ${type.label.toLowerCase()}'
         : 'Confirm your ${type.label.toLowerCase()}';
 
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        const SizedBox(height: 12),
         Text(
           phase == _SetupPhase.enroll
               ? (type == LockType.pattern
                   ? 'Draw a pattern (min 4 dots)'
-                  : 'Enter a ${type == LockType.pin ? '4-digit' : ''} PIN')
+                  : 'Enter a 4-digit PIN')
               : prompt,
           style: context.textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.w700,
           ),
+          textAlign: TextAlign.center,
         ),
         const SizedBox(height: 8),
+        if (phase == _SetupPhase.confirm)
+          Text(
+            'Re-enter to confirm',
+            style: context.textTheme.bodySmall?.copyWith(
+              color: context.colors.onSurfaceVariant,
+            ),
+          ),
         if (error != null)
           Padding(
             padding: const EdgeInsets.only(bottom: 12),
@@ -381,15 +466,14 @@ class _EnrollPhase extends StatelessWidget {
                 color: AppColors.error,
                 fontWeight: FontWeight.w600,
               ),
+              textAlign: TextAlign.center,
             ),
           ),
+        const SizedBox(height: 24),
         if (busy)
-          const Padding(
-            padding: EdgeInsets.all(40),
-            child: CircularProgressIndicator(),
-          )
+          const CircularProgressIndicator()
         else if (type == LockType.pattern)
-          Center(child: PatternLockView(onPatternComplete: onPatternComplete))
+          PatternLockView(onPatternComplete: onPatternComplete)
         else if (type == LockType.pin)
           PinKeypad(
             onPinComplete: onPinComplete,
